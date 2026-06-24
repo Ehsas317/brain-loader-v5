@@ -1,0 +1,26 @@
+# Brain Loader v4 — Legacy FUNDING Reference
+# 
+# This file preserves the v4 funding configuration for reference.
+# v5 uses the root .github/FUNDING.yml instead.
+#
+# History: v4 was the first version to include structured funding support,
+# inspired by the open-source AI tooling community.
+#
+# Notable inspirations for the v4→v5 funding model:
+#   • simonw/llm      — Clean GitHub Sponsors-only approach
+#   • Textualize/rich — Single maintainer, GitHub Sponsors
+#   • pydantic/pydantic — Samuel Colvin's model
+#   • yt-dlp/yt-dlp   — Multiple funding channels, custom links
+#   • Aider-AI/aider  — Heavy community-driven support
+#
+# ─────────────────────────────────────────────
+
+# github: [Ehsas317]
+# ko_fi: brainloader
+# patreon: brainloader
+# open_collective: brain-loader
+# tidelift: pypi/brain-loader
+# 
+# custom:
+#   - "https://github.com/sponsors/Ehsas317"
+#   - "https://ko-fi.com/brainloader"

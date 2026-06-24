@@ -1,0 +1,7 @@
+# Brain Loader v5 — Local Mode Dependencies
+# For Apple Silicon local inference
+
+-r requirements.txt
+
+mlx>=0.21.0         # Apple MLX framework
+mlx-lm>=0.19.0      # MLX language model support
