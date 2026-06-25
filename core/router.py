@@ -126,17 +126,18 @@ class UniversalRouter:
 
             if response.error:
                 last_error = response.error
-                error_type = response.error.split(":")[0] if ":" in response.error else response.error
+                err_lower = response.error.lower()
 
-                # Classify error for retry decisions
-                if error_type in ("RATE_LIMIT",):
+                # FIX BUG-V5-001: Use robust substring matching instead of
+                # brittle split(":")[0] which fails on "HTTP 429" etc.
+                if any(s in err_lower for s in ("rate_limit", "rate limit", "429", "too many requests")):
                     logger.info("Rate limited on %s, trying next...", provider.name)
                     await trio.sleep(2)  # Brief backoff
                     continue
-                elif error_type in ("QUOTA_EXCEEDED", "BILLING", "AUTH"):
+                elif any(s in err_lower for s in ("quota", "billing", "auth", "unauthorized", "401", "403")):
                     logger.info("Quota/auth issue on %s, skipping...", provider.name)
                     continue  # Don't retry — won't help
-                elif error_type in ("TIMEOUT", "NETWORK_ERROR", "SERVER_ERROR"):
+                elif any(s in err_lower for s in ("timeout", "network", "connection", "server", "500", "502", "503")):
                     logger.info("Transient error on %s, trying next...", provider.name)
                     continue
                 else:
@@ -178,16 +179,20 @@ class UniversalRouter:
         Returns:
             List of ProviderResponses (same order as tasks)
         """
-        results: list[ProviderResponse | None] = [None] * len(tasks)
+        # FIX BUG-V5-002: Return ALL results including errors — never silently
+        # drop failed tasks. The caller decides how to handle failures.
+        results: list[ProviderResponse] = []
 
-        async def execute_one(idx: int, role: str, prompt: str, kwargs: dict) -> None:
-            results[idx] = await self.route(role, prompt, **kwargs)
+        async def execute_one(role: str, prompt: str, kwargs: dict) -> ProviderResponse:
+            return await self.route(role, prompt, **kwargs)
 
         async with trio.open_nursery() as nursery:
-            for i, (role, prompt, kwargs) in enumerate(tasks):
-                nursery.start_soon(execute_one, i, role, prompt, kwargs)
+            for role, prompt, kwargs in tasks:
+                nursery.start_soon(
+                    lambda r=role, p=prompt, k=kwargs: results.append(execute_one(r, p, k))
+                )
 
-        return [r for r in results if r is not None]
+        return results
 
     async def close_all(self) -> None:
         """Close all provider connections."""
