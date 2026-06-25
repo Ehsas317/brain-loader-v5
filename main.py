@@ -1,6 +1,30 @@
 #!/usr/bin/env python3
+#
+# ╔═══════════════════════════════════════════════════════════════════════════╗
+# ║  LADDER — FILE: main.py                                                  ║
+# ╚═══════════════════════════════════════════════════════════════════════════╝
+#
+# PROJECT:    Ladder (formerly Brain Loader v5)
+# REPO:       https://github.com/Ehsas317/ladder
+# WHAT:       The Ponytail decision ladder is the actual innovation here.
+#             It climbs rungs to skip work. Named after the thing that makes
+#             it unique.
+#
+# THIS FILE:
+#   Entry point for the Ladder orchestrator. Trio event loop with
+#   interactive REPL and headless modes.
+#
+# HOW TO USE LADDER:
+#   1. Install:    pip install -r requirements.txt
+#   2. Configure:  Edit config.yaml with your API tokens
+#   3. Run:        python main.py "Your project goal"
+#
+# ═══════════════════════════════════════════════════════════════════════════
+#
+
 """
-Brain Loader v5 — Lazy Conductor
+Ladder — Lazy Conductor
+
 Entry point with Trio event loop.
 
 Usage:
@@ -23,7 +47,7 @@ import yaml
 from core.wave_engine import WaveEngine
 from core.ponytail_planner import PonytailPlanner
 from core.cost_tracker import CostTracker
-from tui.repl import BrainREPL
+from tui.repl import LadderREPL
 from utils.state_manager import StateManager
 
 
@@ -37,7 +61,7 @@ def setup_logging(config: dict) -> None:
 
     # File handler for persistent logs
     file_handler = logging.FileHandler(
-        log_dir / f"brain_loader_{datetime.now().strftime('%Y%m%d')}.log"
+        log_dir / f"ladder_{datetime.now().strftime('%Y%m%d')}.log"
     )
     file_handler.setFormatter(logging.Formatter(log_format))
 
@@ -136,7 +160,7 @@ def _default_config() -> dict:
                 "enabled": True,
                 "api_key_env": "DEEPSEEK_API_KEY",
                 "model": "deepseek-chat",
-                "base_url": "https://api.deepseek.com/v1",
+                "base_url": "https://deepseek.com/v1",
                 "timeout": 60,
                 "cost_per_1m_input": 0.14,
                 "cost_per_1m_output": 0.28,
@@ -184,7 +208,7 @@ def _default_config() -> dict:
 
 async def main() -> None:
     """Main entry point — parse args, load config, start REPL or headless."""
-    parser = argparse.ArgumentParser(description="Brain Loader v5 — Lazy Conductor")
+    parser = argparse.ArgumentParser(description="Ladder — Lazy Conductor with Ponytail")
     parser.add_argument("goal", nargs="?", help="Goal to process (headless mode)")
     parser.add_argument("--config", "-c", help="Path to config YAML")
     parser.add_argument("--mode", choices=["local", "api", "hybrid"], help="Override execution mode")
@@ -201,8 +225,8 @@ async def main() -> None:
         config["ponytail"]["mode"] = args.ponytail
 
     setup_logging(config)
-    logger = logging.getLogger("brain_loader")
-    logger.info("Brain Loader v5 — Lazy Conductor starting...")
+    logger = logging.getLogger("ladder")
+    logger.info("Ladder — Lazy Conductor starting...")
     logger.info("Mode: %s | Ponytail: %s", config["mode"], config["ponytail"]["mode"])
 
     # Initialize core components
@@ -221,7 +245,7 @@ async def main() -> None:
         print(result)
     else:
         # Interactive REPL
-        repl = BrainREPL(config, planner, engine, cost_tracker, state_manager)
+        repl = LadderREPL(config, planner, engine, cost_tracker, state_manager)
         await repl.run()
 
 
@@ -229,8 +253,8 @@ if __name__ == "__main__":
     try:
         trio.run(main)
     except KeyboardInterrupt:
-        print("\n\nBrain Loader v5 — Clean shutdown via Ctrl+C")
+        print("\n\nLadder — Clean shutdown via Ctrl+C")
         sys.exit(0)
     except Exception as e:
-        logging.getLogger("brain_loader").critical("Fatal error: %s", e, exc_info=True)
+        logging.getLogger("ladder").critical("Fatal error: %s", e, exc_info=True)
         sys.exit(1)

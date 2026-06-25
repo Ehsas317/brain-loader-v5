@@ -1,4 +1,26 @@
-# Brain Loader v5 — Configuration
+#
+# ╔═══════════════════════════════════════════════════════════════════════════╗
+# ║  LADDER — FILE: config.yaml                                              ║
+# ╚═══════════════════════════════════════════════════════════════════════════╝
+#
+# PROJECT:    Ladder (formerly Brain Loader v5)
+# REPO:       https://github.com/Ehsas317/ladder
+# WHAT:       The Ponytail decision ladder is the actual innovation here.
+#             It climbs rungs to skip work. Named after the thing that makes
+#             it unique.
+#
+# THIS FILE:
+#   Configuration for the Ladder orchestrator. Copy to config.yaml and
+#   customize. Environment variables override these values.
+#
+# HOW TO USE LADDER:
+#   1. Install:    pip install -r requirements.txt
+#   2. Configure:  Copy to config.yaml, add your API keys
+#   3. Run:        python main.py "Your project goal"
+#
+# ═══════════════════════════════════════════════════════════════════════════
+
+# Ladder Configuration
 # Copy to config.yaml and customize. Environment variables override these values.
 
 # Execution mode: local | api | hybrid
@@ -83,7 +105,7 @@ providers:
     enabled: true
     api_key_env: "DEEPSEEK_API_KEY"
     model: deepseek-chat
-    base_url: "https://api.deepseek.com/v1"
+    base_url: "https://deepseek.com/v1"
     timeout: 60
     cost_per_1m_input: 0.14
     cost_per_1m_output: 0.28
