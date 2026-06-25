@@ -1,5 +1,29 @@
+#!/usr/bin/env python3
+#
+# ╔═══════════════════════════════════════════════════════════════════════════╗
+# ║  LADDER — FILE: tui/repl.py                                             ║
+# ╚═══════════════════════════════════════════════════════════════════════════╝
+#
+# PROJECT:    Ladder (formerly Brain Loader v5)
+# REPO:       https://github.com/Ehsas317/ladder
+# WHAT:       The Ponytail decision ladder is the actual innovation here.
+#             It climbs rungs to skip work. Named after the thing that makes
+#             it unique.
+#
+# THIS FILE:
+#   Interactive terminal REPL for Ladder. Rich TUI with live status
+#   dashboard, HITL approval, and command interface.
+#
+# HOW TO USE LADDER:
+#   1. Install:    pip install -r requirements.txt
+#   2. Configure:  Edit config.yaml with your API tokens
+#   3. Run:        python main.py "Your project goal"
+#
+# ═══════════════════════════════════════════════════════════════════════════
+#
+
 """
-BrainREPL — Rich terminal REPL with live status dashboard.
+LadderREPL — Rich terminal REPL with live status dashboard.
 
 Commands:
     /status    — Show provider status and cost
@@ -24,11 +48,20 @@ from core.ponytail_planner import PonytailPlanner
 from core.cost_tracker import CostTracker
 from utils.state_manager import StateManager
 
-logger = logging.getLogger("brain_loader.repl")
+logger = logging.getLogger("ladder.repl")
 
 
-class BrainREPL:
-    """Interactive terminal REPL for Brain Loader v5."""
+class LadderREPL:
+    """
+    Ladder Interactive Terminal REPL
+
+    Provides an interactive command-line interface to monitor
+    and control the Ladder orchestrator.
+
+    Usage:
+        repl = LadderREPL(config, planner, engine, cost_tracker, state_manager)
+        await repl.run()
+    """
 
     def __init__(
         self,
@@ -77,7 +110,6 @@ class BrainREPL:
         """Process a user goal."""
         print(f"\n🧠 Processing: {goal[:60]}{'...' if len(goal) > 60 else ''}")
         
-        # Check budget
         if self.cost_tracker.hard_stop_active:
             print("⚠️  Cost limit reached. Use /cost to check.")
             return
@@ -116,14 +148,14 @@ class BrainREPL:
     def _print_banner(self) -> None:
         """Print the welcome banner."""
         banner = f"""
-╭─────────────────── Brain Loader v5 ─────────────────────╮
-│  Lazy Conductor — Multi-Backend AI Orchestration         │
+╭─────────────────── Ladder ─────────────────────╮
+│  Lazy Conductor — Multi-Backend AI Orchestration │
 │  Mode: {self.mode.upper():6}  ·  Ponytail: {self.ponytail_mode:5}                      │
 │  Providers: {' · '.join(self.engine.router.available_providers):25}  │
-│                                                           │
-│  Commands: /status  /memory  /mode  /cost  /ponytail    │
-│            /save    /help    /exit                        │
-╰───────────────────────────────────────────────────────────╯
+│                                                  │
+│  Commands: /status  /memory  /mode  /cost        │
+│            /ponytail  /save  /help  /exit        │
+╰──────────────────────────────────────────────────╯
 """
         print(banner)
 
@@ -137,7 +169,7 @@ Commands:
   /cost      — Show cost breakdown and YAGNI savings
   /ponytail  — Toggle: lite → full → ultra
   /save      — Save session state
-  /exit      — Quit Brain Loader
+  /exit      — Quit Ladder
   /help      — Show this help
 
 Any other input is treated as a goal for the brain to process.
@@ -177,7 +209,6 @@ Any other input is treated as a goal for the brain to process.
                 print(f"Mode set to: {new_mode}")
                 return
         
-        # Cycle through modes
         modes = ["local", "api", "hybrid"]
         current_idx = modes.index(self.mode) if self.mode in modes else 0
         self.mode = modes[(current_idx + 1) % len(modes)]
@@ -203,5 +234,5 @@ Any other input is treated as a goal for the brain to process.
         print(f"Ponytail mode: {self.ponytail_mode}")
 
     async def _get_input(self, prompt: str) -> str:
-        """Get user input ( Trio-friendly wrapper)."""
+        """Get user input (Trio-friendly wrapper)."""
         return await trio.to_thread.run_sync(input, prompt)
