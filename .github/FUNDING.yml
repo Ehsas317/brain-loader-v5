@@ -1,37 +1,15 @@
-# Brain Loader v5 — Funding
-# Inspired by: simonw/llm, Textualize/rich, pydantic/pydantic, yt-dlp/yt-dlp
-# 
-# If Brain Loader saves you time or API costs, consider sponsoring!
-# Your support funds:
-#   • New provider integrations (Mistral, Cohere, Together, etc.)
-#   • Better local model support (llama.cpp, vLLM)
-#   • Enhanced Ponytail ladder (smarter task decomposition)
-#   • Documentation and tutorials
-#   • Bug fixes and maintenance
+# These are supported funding model platforms
 
-# GitHub Sponsors — Recurring support with exclusive perks
-# github: [Ehsas317]
-
-# Ko-fi — One-time or monthly, no account needed
-# ko_fi: brainloader
-
-# Patreon — Monthly subscriptions with tier rewards
-# patreon: brainloader
-
-# Open Collective — Transparent budgeting for the project
-# open_collective: brain-loader
-
-# Tidelift — Enterprise support through your package manager
-# tidelift: pypi/brain-loader-v5
-
-# Custom sponsorship links
-# custom:
-#   - "https://github.com/sponsors/Ehsas317"
-#   - "https://ko-fi.com/brainloader"
-#   - "https://www.patreon.com/brainloader"
-
-# ─── Uncomment and fill in your usernames above ───
-# To enable GitHub Sponsors: https://github.com/sponsors (must apply)
-# To enable Ko-fi: https://ko-fi.com (instant, no verification)
-# To enable Patreon: https://patreon.com (create creator page)
-# To enable Open Collective: https://opencollective.com (create collective)
+github: [Ehsas317]
+patreon: # Replace with a single Patreon username
+open_collective: # Replace with a single Open Collective username
+ko_fi: # Replace with a single Ko-fi username
+tidelift: # Replace with a single Tidelift platform-name/package-name e.g., npm/babel
+community_bridge: # Replace with a single Community Bridge project-name e.g., cloud-foundry
+liberapay: # Replace with a single Liberapay username
+issuehunt: # Replace with a single IssueHunt username
+lfx_crowdfunding: # Replace with a single LFX Crowdfunding project-name e.g., cloud-foundry
+polar: # Replace with a single Polar username
+buy_me_a_coffee: # Replace with a single Buy Me a Coffee username
+thanks_dev: # Replace with a single thanks.dev username
+custom: # Replace with up to 4 custom sponsorship URLs e.g., ['link1', 'link2']
