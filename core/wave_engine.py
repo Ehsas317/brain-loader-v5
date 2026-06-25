@@ -21,7 +21,24 @@ import trio
 
 from core.router import UniversalRouter
 from core.cost_tracker import CostTracker
-from core.ponytail_planner import PonytailPlanner, LadderResult
+
+# FIX BUG-V5-006: Graceful import for PonytailPlanner with fallback
+try:
+    from core.ponytail_planner import PonytailPlanner, LadderResult
+    PONYTAIL_AVAILABLE = True
+except ImportError:
+    PONYTAIL_AVAILABLE = False
+    # Define minimal stub classes so the rest of the code works
+    @dataclass
+    class LadderResult:
+        rung: int = 0
+        skip_dispatch: bool = False
+        answer: str = ""
+        tokens_saved: int = 0
+    
+    class PonytailPlanner:
+        async def climb_ladder(self, goal: str) -> LadderResult:
+            return LadderResult()
 
 logger = logging.getLogger("brain_loader.wave")
 
@@ -147,18 +164,30 @@ class WaveEngine:
         """
         Brain plans tasks based on goal and Ponytail ladder result.
         
-        In a full implementation, this would call the brain LLM to:
-        1. Analyze the goal
-        2. Determine required specialists
-        3. Generate prompts for each
-        4. Decide parallel vs sequential
-        
-        For now, we use a rule-based planner.
+        Uses the brain role in the router for actual AI-based planning
+        when available, with keyword-based fallback for offline operation.
         """
         tasks: list[Task] = []
         mode = self.config.get("ponytail", {}).get("mode", "lite")
 
-        # Simple keyword-based task decomposition
+        # FIX BUG-V5-004: Try AI-based planning first via the brain role
+        try:
+            brain_plan = await self.router.route(
+                role="brain",
+                prompt=self._build_planning_prompt(goal, ladder_result),
+                max_tokens=2048,
+                temperature=0.7,
+            )
+            if brain_plan.content and not brain_plan.error:
+                parsed_tasks = self._parse_brain_plan(brain_plan.content, goal)
+                if parsed_tasks:
+                    logger.info("🧠 Brain planned %d tasks via LLM", len(parsed_tasks))
+                    return parsed_tasks
+        except Exception as e:
+            logger.debug("AI planning unavailable, using rule-based fallback: %s", e)
+
+        # Fallback: keyword-based task decomposition
+        logger.info("Using rule-based planner (AI planning unavailable)")
         goal_lower = goal.lower()
 
         # Research tasks
@@ -208,6 +237,42 @@ class WaveEngine:
             ))
 
         return tasks
+
+    def _build_planning_prompt(self, goal: str, ladder_result: LadderResult) -> str:
+        """Build a prompt for the brain to plan tasks."""
+        return (
+            f"You are a task planner. Given the user's goal, break it down into "
+            f"specialist tasks that can run in parallel or sequentially.\n\n"
+            f"User Goal: {goal}\n\n"
+            f"Available roles: researcher, coder, writer, critic\n\n"
+            f"Output a JSON list of tasks with id, role, prompt, and parallel (boolean). "
+            f"Tasks with parallel=true can run simultaneously. "
+            f"The critic role should always be parallel=false and depend on other tasks.\n\n"
+            f"Example output format:\n"
+            f'[{{"id": "T1", "role": "researcher", "prompt": "Research...", "parallel": true}}, ...]\n'
+        )
+
+    def _parse_brain_plan(self, content: str, goal: str) -> list[Task] | None:
+        """Parse task list from brain's planning output."""
+        try:
+            # Try to extract JSON from the response
+            json_start = content.find("[")
+            json_end = content.rfind("]")
+            if json_start >= 0 and json_end > json_start:
+                data = json.loads(content[json_start:json_end + 1])
+                tasks = []
+                for item in data:
+                    tasks.append(Task(
+                        id=item.get("id", f"T{len(tasks)+1}"),
+                        role=item.get("role", "default"),
+                        prompt=item.get("prompt", goal),
+                        parallel=item.get("parallel", True),
+                        depends_on=item.get("depends_on", []),
+                    ))
+                return tasks if tasks else None
+        except (json.JSONDecodeError, KeyError, TypeError) as e:
+            logger.debug("Failed to parse brain plan: %s", e)
+        return None
 
     async def _dispatch_wave(self, tasks: list[Task]) -> WaveResult:
         """
@@ -273,8 +338,17 @@ class WaveEngine:
     ) -> None:
         """Run a single task with timeout."""
         try:
-            with trio.move_on_after(timeout):
+            # FIX BUG-V5-003: Use trio.fail_after for hard cancellation
+            # instead of move_on_after which allows the task to continue.
+            with trio.fail_after(timeout):
                 results[task.id] = await self._run_task(task)
+        except trio.TooSlowError:
+            logger.error("Task %s timed out after %.1fs", task.id, timeout)
+            results[task.id] = TaskResult(
+                task_id=task.id,
+                role=task.role,
+                error=f"Timeout after {timeout}s",
+            )
         except Exception as e:
             logger.error("Task %s failed: %s", task.id, e)
             results[task.id] = TaskResult(
@@ -309,9 +383,26 @@ class WaveEngine:
         """
         Synthesize all task outputs into a final answer.
         
-        In a full implementation, this would call the brain LLM.
-        For now, we concatenate with structure.
+        Uses the brain role for actual LLM synthesis when available,
+        with structured concatenation as fallback.
         """
+        # FIX BUG-V5-005: Try LLM-based synthesis first
+        try:
+            context = self._build_synthesis_context(goal, wave_result)
+            brain_response = await self.router.route(
+                role="brain",
+                prompt=context,
+                max_tokens=4096,
+                temperature=0.7,
+            )
+            if brain_response.content and not brain_response.error:
+                logger.info("🧠 Synthesized via LLM brain")
+                return brain_response.content
+        except Exception as e:
+            logger.debug("LLM synthesis unavailable, using fallback: %s", e)
+
+        # Fallback: structured concatenation
+        logger.info("Using structured concatenation (LLM synthesis unavailable)")
         sections = [f"# Brain Loader v5 — Final Answer\n"]
         sections.append(f"**Goal:** {goal}\n")
 
@@ -334,6 +425,18 @@ class WaveEngine:
         sections.append(f"*Tokens: {wave_result.total_tokens:,} | Cost: ${wave_result.total_cost:.4f} | Time: {wave_result.elapsed_ms/1000:.1f}s*\n")
 
         return "\n".join(sections)
+
+    def _build_synthesis_context(self, goal: str, wave_result: WaveResult) -> str:
+        """Build context for LLM synthesis."""
+        parts = [f"Synthesize the following task outputs into a coherent final answer for: {goal}\n"]
+        for tr in wave_result.responses:
+            parts.append(f"\n### {tr.role.upper()} — {tr.task_id}\n")
+            if tr.error:
+                parts.append(f"[Error: {tr.error}]\n")
+            else:
+                parts.append(tr.content[:2000])
+        parts.append("\n\nProvide a unified, well-structured final answer.")
+        return "\n".join(parts)
 
     def _build_context(self, results: dict[str, TaskResult]) -> str:
         """Build context string from parallel task outputs for sequential tasks."""
