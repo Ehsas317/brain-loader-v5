@@ -1,3 +1,28 @@
+#!/usr/bin/env python3
+#
+# ╔═══════════════════════════════════════════════════════════════════════════╗
+# ║  LADDER — FILE: core/ponytail_planner.py                                 ║
+# ╚═══════════════════════════════════════════════════════════════════════════╝
+#
+# PROJECT:    Ladder (formerly Brain Loader v5)
+# REPO:       https://github.com/Ehsas317/ladder
+# WHAT:       The Ponytail decision ladder is the actual innovation here.
+#             It climbs rungs to skip work. Named after the thing that makes
+#             it unique.
+#
+# THIS FILE:
+#   Ponytail Planner — the core innovation of Ladder. A decision ladder
+#   that climbs 5 rungs to determine if work can be skipped entirely.
+#   Saves 40-70% of API tokens vs traditional dispatch.
+#
+# HOW TO USE LADDER:
+#   1. Install:    pip install -r requirements.txt
+#   2. Configure:  Edit config.yaml with your API tokens
+#   3. Run:        python main.py "Your project goal"
+#
+# ═══════════════════════════════════════════════════════════════════════════
+#
+
 """
 PonytailPlanner — Decision ladder engine.
 
@@ -8,7 +33,7 @@ Before dispatching ANY specialists, the brain climbs the Ponytail ladder:
   Rung 4: Merge parallel tasks?
   Rung 5: Minimum viable wave
 
-This is the key v5 feature that saves 40-70% of tokens vs v4.
+This is the key Ladder feature that saves 40-70% of tokens vs v4.
 """
 
 from __future__ import annotations
@@ -18,7 +43,7 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
-logger = logging.getLogger("brain_loader.ponytail")
+logger = logging.getLogger("ladder.ponytail")
 
 
 @dataclass
