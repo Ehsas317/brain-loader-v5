@@ -1,8 +1,31 @@
-"""
-CostTracker — Session cost tracking + YAGNI savings.
+#!/usr/bin/env python3
+#
+# ╔═══════════════════════════════════════════════════════════════════════════╗
+# ║  LADDER — FILE: core/cost_tracker.py                                    ║
+# ╚═══════════════════════════════════════════════════════════════════════════╝
+#
+# PROJECT:    Ladder (formerly Brain Loader v5)
+# REPO:       https://github.com/Ehsas317/ladder
+# WHAT:       The Ponytail decision ladder is the actual innovation here.
+#             It climbs rungs to skip work. Named after the thing that makes
+#             it unique.
+#
+# THIS FILE:
+#   Cost Tracker — session cost tracking with YAGNI savings monitoring.
+#   Tracks every API call, warns before overspending, hard-stops at limit.
+#
+# HOW TO USE LADDER:
+#   1. Install:    pip install -r requirements.txt
+#   2. Configure:  Edit config.yaml with your API tokens
+#   3. Run:        python main.py "Your project goal"
+#
+# ═══════════════════════════════════════════════════════════════════════════
+#
 
-Tracks every API call, warns before overspending, hard-stops at limit.
-YAGNI (You Ain't Gonna Need It) savings come from Ponytail ladder decisions.
+"""
+Ladder — Cost Tracker
+
+Tracks costs and enforces budget limits with YAGNI savings tracking.
 """
 
 from __future__ import annotations
@@ -12,7 +35,7 @@ from dataclasses import dataclass, field
 
 import trio
 
-logger = logging.getLogger("brain_loader.cost")
+logger = logging.getLogger("ladder.cost")
 
 
 @dataclass
@@ -28,13 +51,16 @@ class CostSnapshot:
 
 class CostTracker:
     """
+    Ladder Cost Tracker
+
     Tracks costs and enforces budget limits.
-    
-    Features:
-    - Per-session cost accumulation
-    - Budget warnings (default 85%)
-    - Hard stop at max cost
-    - YAGNI savings tracking
+    YAGNI (You Ain't Gonna Need It) savings come from Ponytail ladder decisions.
+
+    Usage:
+        tracker = CostTracker(config)
+        await tracker.add_cost(0.01, 1000)
+        if tracker.hard_stop_active:
+            print("Budget exceeded!")
     """
 
     def __init__(self, config: dict) -> None:
@@ -60,7 +86,6 @@ class CostTracker:
             self._total_tokens += tokens
             self._api_calls += 1
             
-            # Check warning threshold
             if not self._warned and self._total_cost >= self.max_cost * self.warn_threshold:
                 self._warned = True
                 logger.warning(
@@ -69,7 +94,6 @@ class CostTracker:
                     (self._total_cost / self.max_cost) * 100
                 )
             
-            # Check hard stop
             if self._total_cost >= self.max_cost:
                 self._hard_stop = True
                 logger.error(
@@ -116,8 +140,6 @@ class CostTracker:
 
     def format_summary(self) -> str:
         """Format a human-readable cost summary."""
-        # Note: This is synchronous for REPL display
-        # For accurate values, use snapshot in async context
         return (
             f"Cost: ${self._total_cost:.4f} / ${self.max_cost:.2f} "
             f"| Tokens: {self._total_tokens:,} "
@@ -128,7 +150,7 @@ class CostTracker:
         """Format YAGNI savings summary."""
         if not self.track_yagni:
             return ""
-        saved_cost = (self._yagni_tokens_saved / 1_000_000) * 0.5  # rough estimate
+        saved_cost = (self._yagni_tokens_saved / 1_000_000) * 0.5
         return (
             f"YAGNI: {self._yagni_tokens_saved:,} tokens saved "
             f"(~${saved_cost:.2f}) | {self._yagni_tasks_skipped} tasks skipped"
