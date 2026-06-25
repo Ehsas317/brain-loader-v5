@@ -1,8 +1,35 @@
-"""
-UniversalRouter — Trio-native provider chain routing with auto-failover.
+#!/usr/bin/env python3
+#
+# ╔═══════════════════════════════════════════════════════════════════════════╗
+# ║  LADDER — FILE: core/router.py                                           ║
+# ╚═══════════════════════════════════════════════════════════════════════════╝
+#
+# PROJECT:    Ladder (formerly Brain Loader v5)
+# REPO:       https://github.com/Ehsas317/ladder
+# WHAT:       The Ponytail decision ladder is the actual innovation here.
+#             It climbs rungs to skip work. Named after the thing that makes
+#             it unique.
+#
+# THIS FILE:
+#   Universal Router — Trio-native provider chain routing with auto-failover.
+#   Manages provider chains per role, circuit breakers, and intelligent retries.
+#   All provider calls run through this router for consistent error handling.
+#
+# HOW TO USE LADDER:
+#   1. Install:    pip install -r requirements.txt
+#   2. Configure:  Edit config.yaml with your API tokens
+#   3. Run:        python main.py "Your project goal"
+#
+# ═══════════════════════════════════════════════════════════════════════════
+#
 
-Manages provider chains per role, circuit breakers, and intelligent retries.
-All provider calls run through this router for consistent error handling.
+"""
+Ladder — Universal Router
+
+Routes requests through provider chains with auto-failover.
+Each role has its own chain. The router walks the chain until success.
+
+Example chain for "coder": [deepseek, groq, openai, openrouter, ollama]
 """
 
 from __future__ import annotations
@@ -14,17 +41,19 @@ import trio
 
 from core.providers.base import BaseProvider, ProviderResponse
 
-logger = logging.getLogger("brain_loader.router")
+logger = logging.getLogger("ladder.router")
 
 
 class UniversalRouter:
     """
+    Ladder Universal Router
+
     Routes requests through provider chains with auto-failover.
-    
-    Each role (researcher, coder, critic, etc.) has its own chain.
-    The router walks the chain until a request succeeds.
-    
-    Example chain for "coder": [deepseek, groq, openai, openrouter, ollama]
+    Circuit breakers prevent hammering failing providers.
+
+    Usage:
+        router = UniversalRouter(config)
+        response = await router.route("coder", "Write Python code...")
     """
 
     def __init__(self, config: dict) -> None:
@@ -79,20 +108,12 @@ class UniversalRouter:
     ) -> ProviderResponse:
         """
         Route a prompt through the provider chain.
-        
+
         Walks the chain node by node:
         1. Check circuit breaker
         2. Try request
         3. On failure: classify error, decide retry/skip
         4. On success: track cost, return response
-        
-        Args:
-            role: Specialist role (researcher, coder, critic, etc.)
-            prompt: The prompt to send
-            **kwargs: Additional parameters (model, temperature, etc.)
-        
-        Returns:
-            ProviderResponse with content or error
         """
         chain = self.get_chain(role)
         
@@ -104,23 +125,16 @@ class UniversalRouter:
                 provider="router",
             )
 
-        logger.debug(
-            "Routing '%s' through chain: %s",
-            role, " → ".join(p.name for p in chain)
-        )
-
         last_error = ""
         for provider in chain:
             if not provider.is_available:
                 logger.debug("Provider %s not available, skipping", provider.name)
                 continue
 
-            # Check circuit breaker
             if not await provider.circuit.can_execute():
                 logger.debug("Circuit OPEN for %s, skipping", provider.name)
                 continue
 
-            # Attempt request
             logger.info("Trying %s for '%s'...", provider.name, role)
             response = await provider.execute(prompt, **kwargs)
 
@@ -128,15 +142,14 @@ class UniversalRouter:
                 last_error = response.error
                 err_lower = response.error.lower()
 
-                # FIX BUG-V5-001: Use robust substring matching instead of
-                # brittle split(":")[0] which fails on "HTTP 429" etc.
+                # FIX BUG-V5-001: Robust substring matching for error classification
                 if any(s in err_lower for s in ("rate_limit", "rate limit", "429", "too many requests")):
                     logger.info("Rate limited on %s, trying next...", provider.name)
-                    await trio.sleep(2)  # Brief backoff
+                    await trio.sleep(2)
                     continue
                 elif any(s in err_lower for s in ("quota", "billing", "auth", "unauthorized", "401", "403")):
                     logger.info("Quota/auth issue on %s, skipping...", provider.name)
-                    continue  # Don't retry — won't help
+                    continue
                 elif any(s in err_lower for s in ("timeout", "network", "connection", "server", "500", "502", "503")):
                     logger.info("Transient error on %s, trying next...", provider.name)
                     continue
@@ -144,20 +157,14 @@ class UniversalRouter:
                     logger.info("Error on %s: %s", provider.name, response.error[:80])
                     continue
             else:
-                # Success!
                 if response.fallback_used:
-                    logger.info(
-                        "✓ '%s' completed via fallback %s ($%.4f)",
-                        role, provider.name, response.cost
-                    )
+                    logger.info("✓ '%s' completed via fallback %s ($%.4f)",
+                              role, provider.name, response.cost)
                 else:
-                    logger.info(
-                        "✓ '%s' completed via %s ($%.4f)",
-                        role, provider.name, response.cost
-                    )
+                    logger.info("✓ '%s' completed via %s ($%.4f)",
+                              role, provider.name, response.cost)
                 return response
 
-        # All providers in chain failed
         logger.error("All providers failed for role '%s'. Last error: %s", role, last_error)
         return ProviderResponse(
             content="",
@@ -172,24 +179,25 @@ class UniversalRouter:
     ) -> list[ProviderResponse]:
         """
         Route multiple tasks in parallel via Trio nursery.
-        
+
         Args:
             tasks: List of (role, prompt, kwargs) tuples
-        
+
         Returns:
             List of ProviderResponses (same order as tasks)
         """
-        # FIX BUG-V5-002: Return ALL results including errors — never silently
-        # drop failed tasks. The caller decides how to handle failures.
+        # FIX BUG-V5-002: Return ALL results including errors — never silently drop
         results: list[ProviderResponse] = []
 
         async def execute_one(role: str, prompt: str, kwargs: dict) -> ProviderResponse:
             return await self.route(role, prompt, **kwargs)
 
+        # FIX: nursery.start_soon requires a sync callable that wraps the async call.
+        # The lambda pattern captures variables correctly via default arguments.
         async with trio.open_nursery() as nursery:
             for role, prompt, kwargs in tasks:
                 nursery.start_soon(
-                    lambda r=role, p=prompt, k=kwargs: results.append(execute_one(r, p, k))
+                    lambda r=role, p=prompt, k=kwargs: results.append(await execute_one(r, p, k))
                 )
 
         return results
