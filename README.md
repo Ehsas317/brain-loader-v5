@@ -1,4 +1,4 @@
-# Ladder (formerly Brain Loader v5)
+# Brain Loader v5
 
 **Multi-backend AI orchestration with Ponytail minimal-code philosophy and Trio structured concurrency.**
 
