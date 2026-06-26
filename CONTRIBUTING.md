@@ -1,6 +1,6 @@
-# Contributing to Brain Loader v5
+# Contributing to Ladder
 
-Thank you for your interest in contributing! Brain Loader is a community-driven project and every contribution helps.
+Thank you for your interest in contributing! Ladder is a community-driven project and every contribution helps.
 
 ## How to Contribute
 
