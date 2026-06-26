@@ -40,7 +40,7 @@ except ImportError:
         async def climb_ladder(self, goal: str) -> LadderResult:
             return LadderResult()
 
-logger = logging.getLogger("brain_loader.wave")
+logger = logging.getLogger("ladder.wave")
 
 
 @dataclass
@@ -129,7 +129,7 @@ class WaveEngine:
         tasks = await self._plan_wave(goal, ladder_result)
         
         if not tasks:
-            return f"# Brain Loader v5\n\n**Goal:** {goal}\n\nNo tasks needed — direct answer.\n"
+            return f"# Ladder\n\n**Goal:** {goal}\n\nNo tasks needed — direct answer.\n"
 
         # Step 3: HITL approval (unless auto_approve)
         if not auto_approve:
@@ -150,7 +150,7 @@ class WaveEngine:
         # Summary
         summary = (
             f"\n{'='*60}\n"
-            f"  Brain Loader v5 — Complete\n"
+            f"  Ladder — Complete\n"
             f"  Goal: {goal[:60]}{'...' if len(goal) > 60 else ''}\n"
             f"  Tasks: {len(tasks)} | Cost: ${wave_result.total_cost:.4f}\n"
             f"  Tokens: {wave_result.total_tokens:,}\n"
@@ -403,7 +403,7 @@ class WaveEngine:
 
         # Fallback: structured concatenation
         logger.info("Using structured concatenation (LLM synthesis unavailable)")
-        sections = [f"# Brain Loader v5 — Final Answer\n"]
+        sections = [f"# Ladder — Final Answer\n"]
         sections.append(f"**Goal:** {goal}\n")
 
         # Group by role
@@ -471,7 +471,7 @@ class WaveEngine:
     def _format_direct_answer(self, goal: str, ladder_result: LadderResult) -> str:
         """Format a direct answer when Ponytail ladder stops early."""
         return (
-            f"# Brain Loader v5 — Direct Answer\n\n"
+            f"# Ladder — Direct Answer\n\n"
             f"**Goal:** {goal}\n\n"
             f"{ladder_result.answer or 'No additional processing needed.'}\n\n"
             f"---\n"
